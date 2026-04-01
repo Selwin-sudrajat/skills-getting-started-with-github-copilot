@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 import os
+import re
 from pathlib import Path
 
 app = FastAPI(title="Mergington High School API",
@@ -114,6 +115,9 @@ activities = {
 }
 
 
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
 @app.get("/")
 def root():
     return RedirectResponse(url="/static/index.html")
@@ -131,8 +135,14 @@ def signup_for_activity(activity_name: str, email: str):
     if activity_name not in activities:
         raise HTTPException(status_code=404, detail="Activity not found")
 
+    if not EMAIL_PATTERN.match(email):
+        raise HTTPException(status_code=400, detail="Invalid email format")
+
     # Get the specific activity
     activity = activities[activity_name]
+
+    if len(activity["participants"]) >= activity["max_participants"]:
+        raise HTTPException(status_code=400, detail="Activity is full")
 
     #validatte student is not already signed up
     if email in activity["participants"]:
